@@ -22,6 +22,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glad)
 
+# GLM
+FetchContent_Declare(
+        glm
+        GIT_REPOSITORY https://github.com/g-truc/glm.git
+        GIT_TAG 1.0.1
+)
+
+FetchContent_MakeAvailable(glm)
+
 add_executable(${PROJECT_NAME}
         src/main.cpp
 )
@@ -30,5 +39,6 @@ target_link_libraries(${PROJECT_NAME}
         PRIVATE
         glfw
         glad
+        glm
         opengl32
 )
