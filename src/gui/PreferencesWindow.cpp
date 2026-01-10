@@ -45,10 +45,10 @@ void PreferencesWindow::ShowPreferencesWindow(MainEngine* mainEngine)
             mainEngine->movementSense = movementSense / 100;
         }
 
-        float gravity = mainEngine->gravity;
+        glm::vec3 gravity = mainEngine->gravity;
         ImGui::Text("Movement Sensitivity");
         ImGui::SameLine();
-        if(ImGui::DragFloat("##MovementSense", &gravity, 0.01f, 0.00001f, 0.0f, "%.2f")) {
+        if(ImGui::DragFloat3("##MovementSense", &gravity[0], 0.01f, 0.00001f, 0.0f, "%.2f")) {
             mainEngine->gravity = gravity;
         }
 

@@ -131,9 +131,26 @@ void Shader::SendAttributeData(std::vector<float>& buffer, const char* name)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+void Shader::SendAttributeData(GLuint bufferID, const char* name, GLint size)
+{
+    GLint aLoc = glGetAttribLocation(programID, name);
+    if (aLoc == -1) {
+        std::cerr << "Attribute " << name << " not found in shader program.\n";
+        return;
+    }
 
+    glBindBuffer(GL_ARRAY_BUFFER, bufferID);       // Bind the buffer
+    glEnableVertexAttribArray(aLoc);              // Enable attribute
+    glVertexAttribPointer(
+        aLoc,          // Attribute location
+        size,          // Number of components (2=vec2, 3=vec3)
+        GL_FLOAT,      // Type
+        GL_FALSE,      // Normalize
+        0,             // Stride (0 = tightly packed)
+        nullptr);      // Offset
 
-
+    // DO NOT unbind here! Keep VBO bound while VAO active
+}
 
 void Shader::SendUniformData(int input, const char* name)
 {

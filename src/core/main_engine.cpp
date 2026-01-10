@@ -28,9 +28,15 @@ void MainEngine::CharacterCallback(GLFWwindow* window, unsigned int key, int sca
 
     if(action == GLFW_PRESS) {
         keyPresses.insert_or_assign(key, true);
+        if (key == GLFW_KEY_SPACE) {
+            simulationRunning = true;
+        }
     }
     else if(action == GLFW_RELEASE) {
         keyPresses.insert_or_assign(key, false);
+        if (key == GLFW_KEY_SPACE) {
+            simulationRunning = false;
+        }
     }
 }
 
@@ -55,8 +61,15 @@ void MainEngine::MouseCallback(GLFWwindow* window, int button, int action, int m
 }
 
 void MainEngine::runSimulation() {
-    auto models = GetCurrScene()->GetModels();
-    for(auto curr : models) {
-        curr->GetTransform()->position += gravity * glm::vec3(0, -1, 0) * 0.1f;
+    const auto models = GetCurrScene()->GetModels();
+    for (const auto &curr: models) {
+        SoftBody *body = dynamic_cast<SoftBody *>(curr->GetComponent(SOFTBODY));
+        if (body) {
+            float dt = timeDelta.count();
+            std::cout << "Running simulation loop: " << dt << "s " << std::endl;
+            body->Integrate(dt, gravity);
+            body->SolveConstraints(dt);
+            body->SolveFloorCollision(0.0f); // floor at y = 0
+        }
     }
 }

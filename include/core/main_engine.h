@@ -18,8 +18,7 @@ private:
 
     bool changedScene = true;
 
-    static void TestInit2()
-    {
+    static void TestInit2() {
         const auto scene = std::make_shared<Scene>();
 
         // Camera
@@ -46,7 +45,7 @@ private:
         // Make floor
 
         scene->AddModel("square.obj", "floor");
-        const auto& obj = scene->GetModels().at(1);
+        const auto &obj = scene->GetModels().at(1);
 
         std::dynamic_pointer_cast<Transform>(obj->components[TRANSFORM])->position = {0.f, 0.f, 0.f};
         std::dynamic_pointer_cast<Transform>(obj->components[TRANSFORM])->rotation = {-90.f, 0.f, 0.f};
@@ -76,12 +75,16 @@ public:
     static std::shared_ptr<Scene>& GetCurrScene() { return scenes[currSceneIdx]; }
     static std::unordered_map<unsigned int, bool>& GetKeyPresses() { return keyPresses; }
 
+    std::chrono::duration<float> timeDelta;
+
     float cameraSense = 0.1f;
     float movementSense = 1.f;
-    float gravity = 9.81f;
+    glm::vec3 gravity = {0, -9.81f, 0};
 
     bool mouseDragging = false;
     glm::vec2 lastMousePos = glm::vec2(0.0f);
+
+    bool simulationRunning = false;
 
     MainEngine()
     {
@@ -98,17 +101,17 @@ public:
         return name;
     }
 
-    static void SetScenes(const std::vector<std::shared_ptr<Scene>> &_scenes) {
+    static void SetScenes(const std::vector<std::shared_ptr<Scene> > &_scenes) {
         scenes = _scenes;
     }
 
-    void setName(const std::string& _name) {
+    void setName(const std::string &_name) {
         name = _name;
     }
 
-    void CharacterCallback(GLFWwindow* window, unsigned int key, int scancode, int action, int mods);
+    void CharacterCallback(GLFWwindow *window, unsigned int key, int scancode, int action, int mods);
 
-    void MouseCallback(GLFWwindow* window, int button, int action, int mods);
+    void MouseCallback(GLFWwindow *window, int button, int action, int mods);
 
     void runSimulation();
 };

@@ -12,6 +12,7 @@
 #include "components/material.h"
 #include "components/model.h"
 #include "components/light.h"
+#include "components/softbody.h"
 
 class GameObject {
 public:
@@ -21,9 +22,8 @@ public:
     // that component should be is null.
     std::array<std::shared_ptr<Component>, Component::GetEnumSize()> components{};
     std::unordered_set<std::string> tags;
-    std::string model_path;
 
-    GameObject(const std::string model_path = "../resources/models/sphere.obj") : model_path(model_path), id(generateUniqueId()) {}
+    GameObject() : id(generateUniqueId()) {}
     const int id;
 
     Transform* GetTransform() const {
@@ -89,6 +89,11 @@ public:
                     components[LIGHT] = std::make_shared<PointLight>();
                 }
                 break;
+            case SOFTBODY:
+                if(!components[SOFTBODY]) {
+                    auto modelPath = dynamic_cast<Model*>(components[MODEL].get())->modelPath;
+                    components[SOFTBODY] = std::make_shared<SoftBody>(modelPath);
+                }
             default: ;
         }
     }

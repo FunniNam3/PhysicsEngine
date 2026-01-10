@@ -2,7 +2,7 @@
 
 layout (location = 0) in vec3 vPositionModel; // in object space
 layout (location = 1) in vec3 vNormalModel;   // in object space
-layout (location = 2) in vec2 vTexCoords;
+layout (location = 2) in vec2 vTexCoord;
 
 
 uniform mat4 model;
@@ -24,7 +24,7 @@ void main()
     // Transform normal to world space, preserving direction
     fragNormal = normalize(vec3(modelInverseTranspose * vec4(vNormalModel, 0.0)));
 
-    texCoords = vTexCoords;
+    texCoords = vTexCoord;
 
     fragPosLightSpace = lightSpaceMatrix * vec4(fragPosition, 1.0);
 

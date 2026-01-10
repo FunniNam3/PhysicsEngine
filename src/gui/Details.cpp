@@ -107,9 +107,18 @@ void ShowComponentControl(const std::shared_ptr<Scene> &scene) {
         }
     }
 
-    ImGui::EndDisabled();
+    if(gameObject->GetComponent(SOFTBODY)) {
+        if(ImGui::Button("Remove Soft Body")) {
+            gameObject->RemoveComponent(SOFTBODY);
+        }
+    }
+    else {
+        if(ImGui::Button("Add Soft Body")) {
+            gameObject->AddComponent(SOFTBODY);
+        }
+    }
 
-    const char* items[] = { "Select Component", "Transform", "Material", "Light", "Rigid Body" };
+    const char* items[] = { "Select Component", "Transform", "Material", "Light", "Soft Body" };
     static int currentComponent = 0;
     static int currentObject = 0;
     static COMPONENT_TYPE type = NUM_ENUM;
@@ -133,6 +142,7 @@ void ShowComponentControl(const std::shared_ptr<Scene> &scene) {
             case 1: type = TRANSFORM; break;
             case 2: type = MATERIAL; break;
             case 3: type = LIGHT; break;
+            case 4: type = SOFTBODY; break;
         }
         if(type != NUM_ENUM) {
             for(const auto& model : scene->GetModels()) {

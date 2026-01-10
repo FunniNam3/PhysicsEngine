@@ -16,6 +16,9 @@ public:
     void Init();
     std::string ReadShader(const std::string &name);
     void SendAttributeData(std::vector<float>& buffer, const char* name);
+
+    void SendAttributeData(GLuint, const char *name, GLint size);
+
     void SendUniformData(int a, const char* name);
     void SendUniformData(float a, const char* name);
     void SendUniformData(glm::vec3 input, const char* name);

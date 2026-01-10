@@ -35,9 +35,13 @@ class RenderEngine
 
 	Shader program;
 	Shader shadow;
-	std::unordered_map<std::string, std::vector<float>> posBuffMap;
-	std::unordered_map<std::string, std::vector<float>> texBuffMap;
-	std::unordered_map<std::string, std::vector<float>> norBuffMap;
+	std::unordered_map<std::string, GLuint> posBuffMap;
+	std::unordered_map<std::string, GLuint> norBuffMap;
+	std::unordered_map<std::string, GLuint> texBuffMap;
+	std::unordered_map<std::string, GLuint> indexBuffMap;
+	std::unordered_map<std::string, size_t> indexCountMap;
+	std::unordered_map<std::string, GLuint> vaoMap;
+
     std::unordered_map<std::string, glm::vec3>          biasMap;
 
 	std::vector<float> posBuff;

@@ -8,8 +8,8 @@
 #include <fstream>
 #include <chrono>
 
-#include "gui/gui_engine.h"
 #define TINYOBJLOADER_IMPLEMENTATION
+#include "gui/gui_engine.h"
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -163,7 +163,12 @@ int main(int argc, char *argv[])
 
         end = std::chrono::steady_clock::now();
         timeDelta = end - start;
-        // std::cout << timeDelta.count() << std::endl;
+		mainEngine.timeDelta = timeDelta;
+		if (mainEngine.simulationRunning) {
+			mainEngine.runSimulation();
+		}
+
+		// std::cout << timeDelta.count() << std::endl;
 		glfwSwapBuffers(window);
 
 		if(mainEngine.mouseDragging) {
