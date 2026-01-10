@@ -19,7 +19,6 @@
 #include "FileHierarchy.h"
 #include "MenuBar.h"
 #include "SecondaryMenuBar.h"
-#include "Terminal.h"
 #include "PreferencesWindow.h"
 
 class GuiEngine
@@ -47,7 +46,6 @@ private:
     MenuBar menuBar;
     AddObjectWindow addObjectWindow;
     SecondMenuBar secondMenuBar;
-    Terminal terminal;
     PreferencesWindow preferencesWindow;
 
 public:
@@ -56,8 +54,8 @@ public:
     ~GuiEngine() = default;
     bool init(GLFWwindow *window , MainEngine *_game_engine);
     void run();
-    glm::vec4 SendViewportInfo() {
+    glm::vec4 SendViewportInfo() const {
         return {viewport.SendCursorPos(),viewport.SendSize()};
     }
-    void cleanup();
+    static void cleanup();
 };

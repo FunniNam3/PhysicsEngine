@@ -1,6 +1,6 @@
 #include "gui/PreferencesWindow.h"
 
-void PreferencesWindow::ShowPreferencesWindow(float &mousePreferences, float &movementPreferences)
+void PreferencesWindow::ShowPreferencesWindow(MainEngine* mainEngine)
 {
     ImGuiIO& io = ImGui::GetIO();
     ImVec2 DisplaySize = io.DisplaySize;
@@ -31,18 +31,25 @@ void PreferencesWindow::ShowPreferencesWindow(float &mousePreferences, float &mo
 
         ImGui::Text("Preferences");
         ImGui::Separator();
-        float mouseSense = mousePreferences * 100;
+        float mouseSense = mainEngine->cameraSense * 100;
         ImGui::Text("Mouse Sensitivity");
         ImGui::SameLine();
         if(ImGui::DragFloat("##MouseSense", &mouseSense, 0.01f, 0.00001f, 0.0f, "%.2f")) {
-            mousePreferences = mouseSense / 100;
+            mainEngine->cameraSense = mouseSense / 100;
         }
 
-        float movementSense = movementPreferences * 100;
+        float movementSense = mainEngine->movementSense * 100;
         ImGui::Text("Movement Sensitivity");
         ImGui::SameLine();
         if(ImGui::DragFloat("##MovementSense", &movementSense, 0.01f, 0.00001f, 0.0f, "%.2f")) {
-            movementPreferences = movementSense / 100;
+            mainEngine->movementSense = movementSense / 100;
+        }
+
+        float gravity = mainEngine->gravity;
+        ImGui::Text("Movement Sensitivity");
+        ImGui::SameLine();
+        if(ImGui::DragFloat("##MovementSense", &gravity, 0.01f, 0.00001f, 0.0f, "%.2f")) {
+            mainEngine->gravity = gravity;
         }
 
         ImGui::EndTabItem();

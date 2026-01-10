@@ -26,13 +26,12 @@ public:
     GameObject(const std::string model_path = "../resources/models/sphere.obj") : model_path(model_path), id(generateUniqueId()) {}
     const int id;
 
-    Transform* get_transform()
-    {
+    Transform* GetTransform() const {
         return dynamic_cast<Transform*>(components[TRANSFORM].get());
     }
 
     // returns a reference to the component of the given type
-    Component* GetComponent(COMPONENT_TYPE type) {
+    Component* GetComponent(COMPONENT_TYPE type) const {
         return components[type].get();
     }
 
@@ -42,14 +41,13 @@ public:
     }*/
 
     // returns the amount of components
-    int GetComponentCount() {
+    int GetComponentCount() const {
         int count = 0;
 
-        for(std::shared_ptr<Component> component : components) {
+        for(const std::shared_ptr<Component>& component : components) {
             if(component) {
                 count++;
             }
-
         }
         return count;
     }
@@ -69,7 +67,7 @@ public:
         tags.erase(tag);
     }
 
-    void AddComponent(COMPONENT_TYPE component) {
+    void AddComponent(const COMPONENT_TYPE component) {
         switch(component) {
             // case TRANSFORM:
             //     if(!components[TRANSFORM]) {
@@ -91,6 +89,7 @@ public:
                     components[LIGHT] = std::make_shared<PointLight>();
                 }
                 break;
+            default: ;
         }
     }
 

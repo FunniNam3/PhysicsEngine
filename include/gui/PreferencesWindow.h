@@ -1,11 +1,12 @@
 #pragma once
 
 #include "imgui.h"
+#include "core/main_engine.h"
 
 
 class PreferencesWindow
 {
     bool showPreferences = true;
   public:
-    void ShowPreferencesWindow(float &mousePreferences, float &movementPreferences);
+    void ShowPreferencesWindow(MainEngine* mainEngine);
 };

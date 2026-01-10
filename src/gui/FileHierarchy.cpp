@@ -30,9 +30,6 @@ void FileHierarchy::ShowFileHierarchy(std::shared_ptr<Scene> scene, bool &showAd
             // All other objects in the game
             for (const auto& obj : Objects) {
                 if(ImGui::Selectable(obj->name.c_str())) {
-#ifndef _USE_SCENE_
-                    gameEngine->selectedGameObj = obj;
-#endif
                     scene->selectedGameObj = obj;
                     scene->selectedCamera = nullptr;
                     scene->mOrL = true;
@@ -59,9 +56,6 @@ void FileHierarchy::ShowFileHierarchy(std::shared_ptr<Scene> scene, bool &showAd
             // All other objects in the game
             for (const auto& l : Lights) {
                 if(ImGui::Selectable(std::string("Light" + (std::to_string(l->id))).c_str())) {
-#ifndef _USE_SCENE_
-                    gameEngine->selectedGameObj = obj;
-#endif
                     scene->selectedGameObj = l;
                     scene->selectedCamera = nullptr;
                     scene->mOrL = false;

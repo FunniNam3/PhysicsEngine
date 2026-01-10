@@ -126,9 +126,6 @@ void GuiEngine::run()
     ImGui::PopFont();
 
     if(showHierarchy) {
-#ifndef _USE_SCENE_
-        ShowFileHierarchy(mainEngine ,mainEngine->GetGameObjects());
-#endif
         fileHierarchy.ShowFileHierarchy(mainEngine->GetCurrScene() , showAddObject);
     }
     if(showView)
@@ -141,22 +138,10 @@ void GuiEngine::run()
     }
     if(showAddObject) {
         addObjectWindow.showAddObjectWindow(mainEngine, showAddObject);
-#ifndef _USE_SCENE_
-        details.ShowDetails(mainEngine->selectedGameObj);
-#endif
     }
 
-    // Show terminal window
-    terminal.ShowTerminal(mainEngine->GetCurrScene());
+    preferencesWindow.ShowPreferencesWindow(mainEngine);
 
-    preferencesWindow.ShowPreferencesWindow(mainEngine->cameraSense, mainEngine->movementSense);
-
-    // if(showLoadFile) {
-    //     loadFileWindow.showLoadFileWindow(mainEngine, showLoadFile);
-    // }
-    // if(showSaveAs) {
-    //     saveAsWindow.showSaveAsWindow(mainEngine, showSaveAs);
-    // }
     // Rendering
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -147,7 +147,7 @@ public:
         EularRotation = eulerAngles;
         glm::vec3 radianAngles = glm::radians(eulerAngles); // Convert degrees to radians
 
-        // Convert Euler angles to quaternion (YXZ Order)
+        // Convert radian angles to quaternion (YXZ Order)
         Rotation = glm::quat(glm::vec3(radianAngles.x, radianAngles.y, radianAngles.z));
 
         // Normalize to avoid floating point drift

@@ -174,7 +174,6 @@ void RenderEngine::MapShadows(GLuint depthMapFBO, GLuint const shadowWidth,  GLu
     for (const auto& model : scene->GetModels())
     {
         const auto& objTransform = std::dynamic_pointer_cast<Transform>( model->components[TRANSFORM]);
-        const auto& objMaterial = std::dynamic_pointer_cast<Material>( model->components[MATERIAL]);
         const auto& objModel = std::dynamic_pointer_cast<Model>(model->components[MODEL]);
 
 
@@ -194,8 +193,6 @@ void RenderEngine::MapShadows(GLuint depthMapFBO, GLuint const shadowWidth,  GLu
             * glm::rotate(glm::mat4(1.0f), glm::radians(objTransform->rotation[1]), glm::vec3(0.0f, 1.0f, 0.0f))
             * glm::rotate(glm::mat4(1.0f), glm::radians(objTransform->rotation[2]), glm::vec3(0.0f, 0.0f, 1.0f))
             * glm::scale(glm::mat4(1.0f), objTransform->scale);
-
-        glm::mat4 modelInverseTranspose = glm::transpose(glm::inverse(modelMatrix));
 
         shadow.SendAttributeData(posBuffMap[modelPath], "aPos");
 

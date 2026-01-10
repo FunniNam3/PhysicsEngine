@@ -22,7 +22,7 @@ private:
 	// Directional Light Info
 
 	float lightNearPlane = 0.1f, lightFarPlane = 50.f;
-	glm::vec3 lightEye = glm::vec3(-10.0f,4.f,5.f);
+	glm::vec3 lightEye = glm::vec3(0.0f,20.f,-30.f);
 	glm::vec3 lightCenter = glm::vec3(0.0f);
 	glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -39,15 +39,15 @@ private:
     static int randomId;
 public:
 
-	inline float getLightNearPlane() const { return lightNearPlane; }
-	inline float getLightFarPlane() const { return lightFarPlane; }
-	inline glm::vec3 getlightEye() const { return lightEye; }
-	inline glm::vec3 getlightCenter() const { return lightCenter; }
-	inline glm::vec3 getlightUp() const { return lightUp; }
+	float getLightNearPlane() const { return lightNearPlane; }
+	float getLightFarPlane() const { return lightFarPlane; }
+	glm::vec3 getlightEye() const { return lightEye; }
+	glm::vec3 getlightCenter() const { return lightCenter; }
+	glm::vec3 getlightUp() const { return lightUp; }
 
-	inline glm::mat4 getLightProjection() const { return lightProjection; }
-	inline glm::mat4 getLightView() const { return lightView; }
-	inline glm::mat4 getLightSpaceMatrix() const { return lightSpaceMatrix; }
+	glm::mat4 getLightProjection() const { return lightProjection; }
+	glm::mat4 getLightView() const { return lightView; }
+	glm::mat4 getLightSpaceMatrix() const { return lightSpaceMatrix; }
 
 	void setLightNearPlane(const float &nearPlane) {
 		lightNearPlane = nearPlane;
@@ -125,13 +125,17 @@ public:
         glm::vec3 pos= {0.0f, 0.0f, 0.0f};
 
         auto obj = std::make_shared<GameObject>();
-  	    const auto objName = objFile.substr(0, objFile.find_last_of('.')) + std::to_string(randomId++);
+  		if(name.empty()) {
+  			obj->name = objFile.substr(0, objFile.find_last_of('.')) + std::to_string(randomId++);
+  		}
+  		else {
+  			obj->name = name;
+  		}
 
         const auto objTransform = std::make_shared<Transform>(pos);
         const auto objMaterial = std::make_shared<Material>();
   	    const auto objModel = std::make_shared<Model>(objFile);
 
-        obj->name = objName;
         obj->components[TRANSFORM] = objTransform;
         obj->components[MATERIAL] = objMaterial;
   	    obj->components[MODEL] = objModel;
@@ -143,27 +147,27 @@ public:
     void AddModel(){
         glm::vec3 pos = {0.0f, 0.0f, 0.0f};
 
-        const auto bunnyObj = std::make_shared<GameObject>();
-        const auto bunnyName = std::string("bunny" + std::to_string(randomId++));
-        const auto bunnyTransform = std::make_shared<Transform>(pos);
-        const auto bunnyMaterial = std::make_shared<Material>();
-  	    const auto bunnyModel = std::make_shared<Model>();
+        const auto obj = std::make_shared<GameObject>();
+        const auto name = std::string("object" + std::to_string(randomId++));
+        const auto transform = std::make_shared<Transform>(pos);
+        const auto material = std::make_shared<Material>();
+  	    const auto model = std::make_shared<Model>();
 
-        bunnyObj->name = bunnyName;
-        bunnyObj->components[TRANSFORM] = bunnyTransform;
-        bunnyObj->components[MATERIAL] = bunnyMaterial;
-  	    bunnyObj->components[MODEL] = bunnyModel;
+        obj->name = name;
+        obj->components[TRANSFORM] = transform;
+        obj->components[MATERIAL] = material;
+  	    obj->components[MODEL] = model;
 
-  	    std::cout << std::dynamic_pointer_cast<Model>(bunnyObj->components[MODEL])->modelPath << std::endl;
+  	    std::cout << std::dynamic_pointer_cast<Model>(obj->components[MODEL])->modelPath << std::endl;
 
-        AddModel(bunnyObj);
+        AddModel(obj);
     };
 
-    void SetLightsVector(const std::vector<std::shared_ptr<GameObject>> _lights) {
+    void SetLightsVector(const std::vector<std::shared_ptr<GameObject>>& _lights) {
         lights = _lights;
     }
 
-    void SetModelsVector(const std::vector<std::shared_ptr<GameObject>> _models) {
+    void SetModelsVector(const std::vector<std::shared_ptr<GameObject>>& _models) {
         models = _models;
     }
 
@@ -184,13 +188,13 @@ public:
 	std::vector<std::shared_ptr<GameObject>> SearchByTag(const std::string& tag) {
 		std::vector<std::shared_ptr<GameObject>> gameObjects;
 
-		for(std::shared_ptr<GameObject> model : models) {
+		for(const std::shared_ptr<GameObject>& model : models) {
 			if(model->CompareTag(tag)) {
 				gameObjects.push_back(model);
 			}
 		}
 
-		for(std::shared_ptr<GameObject> light : lights) {
+		for(const std::shared_ptr<GameObject>& light : lights) {
 			if(light->CompareTag(tag)) {
 				gameObjects.push_back(light);
 			}
@@ -203,13 +207,13 @@ public:
 	std::vector<std::shared_ptr<GameObject>> SearchByComponent(COMPONENT_TYPE type) {
 		std::vector<std::shared_ptr<GameObject>> gameObjects;
 
-		for(std::shared_ptr<GameObject> model : models) {
+		for(const std::shared_ptr<GameObject>& model : models) {
 			if(model->GetComponent(type)) {
 				gameObjects.push_back(model);
 			}
 		}
 
-		for(std::shared_ptr<GameObject> light : lights) {
+		for(const std::shared_ptr<GameObject>& light : lights) {
 			if(light->GetComponent(type)) {
 				gameObjects.push_back(light);
 			}
@@ -222,13 +226,13 @@ public:
 	std::vector<std::shared_ptr<GameObject>> SearchByName(const std::string& name) {
 		std::vector<std::shared_ptr<GameObject>> gameObjects;
 
-		for(std::shared_ptr<GameObject> model : models) {
+		for(const std::shared_ptr<GameObject>& model : models) {
 			if(model->name == name) {
 				gameObjects.push_back(model);
 			}
 		}
 
-		for(std::shared_ptr<GameObject> light : lights) {
+		for(const std::shared_ptr<GameObject>& light : lights) {
 			if(light->name == name) {
 				gameObjects.push_back(light);
 			}
@@ -241,13 +245,13 @@ public:
 	std::vector<std::shared_ptr<GameObject>> SearchByNameContains(const std::string& name) {
 		std::vector<std::shared_ptr<GameObject>> gameObjects;
 
-		for(std::shared_ptr<GameObject> model : models) {
+		for(const std::shared_ptr<GameObject>& model : models) {
 			if(model->name.find(name) != std::string::npos) {
 				gameObjects.push_back(model);
 			}
 		}
 
-		for(std::shared_ptr<GameObject> light : lights) {
+		for(const std::shared_ptr<GameObject>& light : lights) {
 			if(light->name.find(name) != std::string::npos) {
 				gameObjects.push_back(light);
 			}

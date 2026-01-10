@@ -80,7 +80,7 @@ void DeleteObject(const std::shared_ptr<Scene>& scene) {
     }
 }
 
-void ShowComponentControl(const std::shared_ptr<Scene> scene) {
+void ShowComponentControl(const std::shared_ptr<Scene> &scene) {
     std::shared_ptr<GameObject> gameObject = scene->selectedGameObj;
     // ImGui::Text("Number of Components: %d", gameObject->GetComponentCount());
 
@@ -107,33 +107,6 @@ void ShowComponentControl(const std::shared_ptr<Scene> scene) {
         }
     }
 
-    ImGui::BeginDisabled(gameObject->GetComponent(RIGID_BODY));
-    if(gameObject->GetComponent(COLLIDER)) {
-        if(ImGui::Button("Remove Collider")) {
-            gameObject->RemoveComponent(COLLIDER);
-        }
-    }
-    else {
-        if(ImGui::Button("Add Plane Collider")) {
-            gameObject->AddComponent(PLANE_COLLIDER);
-        }
-        if(ImGui::Button("Add Sphere Collider")) {
-            gameObject->AddComponent(SPHERE_COLLIDER);
-        }
-    }
-    ImGui::EndDisabled();
-
-    ImGui::BeginDisabled(!gameObject->GetComponent(COLLIDER));
-    if(gameObject->GetComponent(RIGID_BODY)) {
-        if(ImGui::Button("Remove Rigid Body")) {
-            gameObject->RemoveComponent(RIGID_BODY);
-        }
-    }
-    else {
-        if(ImGui::Button("Add Rigid Body")) {
-            gameObject->AddComponent(RIGID_BODY);
-        }
-    }
     ImGui::EndDisabled();
 
     const char* items[] = { "Select Component", "Transform", "Material", "Light", "Rigid Body" };
@@ -160,8 +133,6 @@ void ShowComponentControl(const std::shared_ptr<Scene> scene) {
             case 1: type = TRANSFORM; break;
             case 2: type = MATERIAL; break;
             case 3: type = LIGHT; break;
-            case 4: type = RIGID_BODY; break;
-            case 5: type = COLLIDER; break;
         }
         if(type != NUM_ENUM) {
             for(const auto& model : scene->GetModels()) {
