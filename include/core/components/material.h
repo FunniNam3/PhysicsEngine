@@ -3,7 +3,7 @@
 #include "component.h"
 #include <glm/vec3.hpp>
 
-class Material: public Component {
+class Material final: public Component {
 public:
 
     glm::vec3 ambient;

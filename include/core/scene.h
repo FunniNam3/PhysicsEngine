@@ -120,6 +120,7 @@ public:
   	    {
   	        std::cerr << "objFile is not of filetype .obj" << std::endl;
   	        assert(false);
+  	    	return;
   	    }
 
         glm::vec3 pos= {0.0f, 0.0f, 0.0f};

@@ -2,7 +2,7 @@
 #include "component.h"
 #include <glm/glm.hpp>
 
-class PointLight: public Component {
+class PointLight final: public Component {
 public:
     glm::vec3 color;
     float intensity;

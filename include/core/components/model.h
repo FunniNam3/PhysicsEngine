@@ -6,7 +6,7 @@
 #include <string>
 
 #define RESOURCES_PATH "../resources/models/"
-class Model: public Component {
+class Model final: public Component {
 public:
     std::string modelPath;
     std::string resourcesPath = std::string(RESOURCES_PATH);

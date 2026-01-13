@@ -1,5 +1,4 @@
 #pragma once
-#include <stddef.h>
 #include <memory>
 
 enum COMPONENT_TYPE {
@@ -21,5 +20,5 @@ public:
 
     static constexpr size_t GetEnumSize() { return NUM_ENUM; };
 
-    virtual std::shared_ptr<Component> Clone() const = 0;
+    [[nodiscard]] virtual std::shared_ptr<Component> Clone() const = 0;
 };

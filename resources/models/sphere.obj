@@ -1,12 +1,3 @@
-# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
-# File Created: 09.10.2022 11:36:31
-
-mtllib ball.mtl
-
-#
-# object Sphere002
-#
-
 v 0.000000 1.000000 -0.000000
 v -0.000000 0.980785 -0.195090
 v -0.038060 0.980785 -0.191342
