@@ -137,7 +137,7 @@ void GuiEngine::run()
         details.ShowDetails(mainEngine->GetCurrScene());
     }
     if(showAddObject) {
-        addObjectWindow.showAddObjectWindow(mainEngine, showAddObject);
+        addObjectWindow.showAddObjectWindow(showAddObject);
     }
 
     preferencesWindow.ShowPreferencesWindow(mainEngine);

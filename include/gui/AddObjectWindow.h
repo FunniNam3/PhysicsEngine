@@ -11,5 +11,5 @@ class AddObjectWindow{
         std::string location;
         std::string name;
   public:
-    void showAddObjectWindow(MainEngine *engine, bool &ShowAddObject);
+    void showAddObjectWindow(bool &ShowAddObject);
 };

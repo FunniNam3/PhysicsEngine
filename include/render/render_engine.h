@@ -63,7 +63,7 @@ class RenderEngine
 	MainEngine* mainEngine;
 
 	// Helper Function to generate normals when obj doesn't have normals saved in the file
-	glm::vec3 GenerateNormal(const std::vector<glm::vec3>& faceVertices);
+	static glm::vec3 GenerateNormal(const std::vector<glm::vec3>& faceVertices);
 
     glm::vec3 CalculateBias(const std::vector<glm::vec3>& verts);
 

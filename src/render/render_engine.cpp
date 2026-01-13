@@ -108,10 +108,10 @@ void LoadOBJ(
 void RenderEngine::LoadModel(const std::string &path) {
     std::vector<glm::vec3> positions;
     std::vector<glm::vec3> normals;
-    std::vector<glm::vec2> texcoords;
+    std::vector<glm::vec2> textures;
     std::vector<unsigned int> indices;
 
-    LoadOBJ(path, positions, normals, texcoords, indices);
+    LoadOBJ(path, positions, normals, textures, indices);
 
     GLuint posVBO, norVBO, texVBO, ebo, vao;
 
@@ -135,8 +135,8 @@ void RenderEngine::LoadModel(const std::string &path) {
     glGenBuffers(1, &texVBO);
     glBindBuffer(GL_ARRAY_BUFFER, texVBO);
     glBufferData(GL_ARRAY_BUFFER,
-                 texcoords.size() * sizeof(glm::vec2),
-                 texcoords.data(),
+                 textures.size() * sizeof(glm::vec2),
+                 textures.data(),
                  GL_STATIC_DRAW);
 
     glGenBuffers(1, &ebo);
@@ -186,16 +186,16 @@ glm::vec3 RenderEngine::GenerateNormal(const std::vector<glm::vec3>& faceVertice
         return glm::vec3(0.0f); // Return a zero normal
     }
 
-    glm::vec3 v0 = faceVertices[0];
-    glm::vec3 v1 = faceVertices[1];
-    glm::vec3 v2 = faceVertices[2];
+    const glm::vec3 v0 = faceVertices[0];
+    const glm::vec3 v1 = faceVertices[1];
+    const glm::vec3 v2 = faceVertices[2];
 
     // Calculate two edges
-    glm::vec3 edge1 = v1 - v0;
-    glm::vec3 edge2 = v2 - v0;
+    const glm::vec3 edge1 = v1 - v0;
+    const glm::vec3 edge2 = v2 - v0;
 
     // Calculate the normal using the cross product
-    glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+    const glm::vec3 normal = normalize(cross(edge1, edge2));
 
     return normal;
 }
@@ -263,10 +263,6 @@ void RenderEngine::MapShadows(GLuint depthMapFBO, GLuint const shadowWidth,  GLu
 
 void RenderEngine::Display(glm::vec4 viewportInfo, GLuint depthMap)
 {
-    // TODO
-    // Fix code so that all faces are rendered properly
-    // Right now only top and bottom face are being simulated since theres only 8 vertices being updated in code
-
     int width, height;
     glfwGetWindowSize(window, &width, &height);
 

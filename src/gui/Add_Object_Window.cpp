@@ -3,10 +3,9 @@
 #include "core/camera.h"
 #include <glm/common.hpp>
 
-void AddObjectWindow::showAddObjectWindow(MainEngine *engine, bool &ShowAddObject){
-
+void AddObjectWindow::showAddObjectWindow(bool &ShowAddObject) {
     // Set add object;
-    ImGui::Begin("Add Object Window", NULL);
+    ImGui::Begin("Add Object Window", nullptr);
 
     if (ImGui::Button("Game Object")) {
         objectType = 1;
@@ -25,11 +24,11 @@ void AddObjectWindow::showAddObjectWindow(MainEngine *engine, bool &ShowAddObjec
             ImGui::Text("Game object selected");
             ImGui::Text("Location");
             ImGui::SameLine();
-            char locationbuffer[128];
-            strncpy(locationbuffer, location.c_str(), sizeof(locationbuffer));
-            locationbuffer[127] = '\0';
-            if(ImGui::InputText("##Location", locationbuffer, sizeof(locationbuffer))) {
-                location = locationbuffer;
+            char locationBuffer[128];
+            strncpy(locationBuffer, location.c_str(), sizeof(locationBuffer));
+            locationBuffer[127] = '\0';
+            if (ImGui::InputText("##Location", locationBuffer, sizeof(locationBuffer))) {
+                location = locationBuffer;
             }
 
             ImGui::Text("Name");
@@ -57,8 +56,8 @@ void AddObjectWindow::showAddObjectWindow(MainEngine *engine, bool &ShowAddObjec
     if(ImGui::Button("Add Object")) {
         switch (objectType) {
             case 1:
-                if(!location.empty()) {
-                    engine->GetCurrScene()->AddModel(location, name);
+                if (!location.empty() && (location.find(".obj") != std::string::npos)) {
+                    MainEngine::GetCurrScene()->AddModel(location, name);
                 }
                 break;
             case 2: {
@@ -75,12 +74,12 @@ void AddObjectWindow::showAddObjectWindow(MainEngine *engine, bool &ShowAddObjec
                 light1->components[TRANSFORM] = lightTransform1;
                 light1->components[LIGHT] = lightComp1;
 
-                engine->GetCurrScene()->GetLights().emplace_back(light1);
+                MainEngine::GetCurrScene()->GetLights().emplace_back(light1);
                 break;
             }
             case 3: {
                 auto camera = std::make_shared<Camera>();
-                engine->GetCurrScene()->GetCameras().emplace_back(camera);
+                MainEngine::GetCurrScene()->GetCameras().emplace_back(camera);
                 break;
             }
 

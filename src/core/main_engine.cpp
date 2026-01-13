@@ -69,7 +69,7 @@ void MainEngine::runSimulation() {
             std::cout << "Running simulation loop: " << dt << "s " << std::endl;
             body->Integrate(dt, gravity);
             body->SolveConstraints(dt);
-            body->SolveFloorCollision(0.0f); // floor at y = 0
+            body->SolveFloorCollision(-10.0f); // floor at y = 0
         }
     }
 }

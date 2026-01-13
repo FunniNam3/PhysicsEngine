@@ -19,17 +19,8 @@ struct Edge {
     }
 };
 
-struct EdgeHash {
-    size_t operator()(const Edge& e) const {
-        return std::hash<uint32_t>()(e.a) ^
-               std::hash<uint32_t>()(e.b);
-    }
-};
-
 class SoftBody : public Component
 {
-
-    std::unordered_set<Edge, EdgeHash> edges;
 
 public:
     std::vector<glm::vec3> restPositions;
@@ -51,58 +42,114 @@ public:
         std::vector<tinyobj::material_t> materials;
         std::string err;
 
-        bool ok = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, modelPath.c_str());
+        struct PhysVertex {
+            int v, n, t;
+
+            bool operator==(const PhysVertex &other) const {
+                return v == other.v && n == other.n && t == other.t;
+            }
+        };
+
+        struct PhysVertexHash {
+            size_t operator()(const PhysVertex &p) const {
+                const size_t h1 = std::hash<int>()(p.v);
+                const size_t h2 = std::hash<int>()(p.n);
+                const size_t h3 = std::hash<int>()(p.t);
+                return h1 ^ (h2 << 1) ^ (h3 << 2);
+            }
+        };
+
+        bool ok = LoadObj(&attrib, &shapes, &materials, &err, modelPath.c_str());
         if (!ok) {
             throw std::runtime_error(err);
         }
 
-        // Map to keep only unique vertices by position
-        struct Vec3Hash {
-            size_t operator()(const glm::vec3& v) const {
-                return std::hash<float>()(v.x) ^ std::hash<float>()(v.y) ^ std::hash<float>()(v.z);
-            }
-        };
-
-        std::unordered_map<glm::vec3, uint32_t, Vec3Hash> posMap;
+        std::unordered_map<PhysVertex, uint32_t, PhysVertexHash> vertexMap;
         std::vector<uint32_t> indices;
 
         // Collect vertices and triangulate faces
         for (const auto& shape : shapes) {
+            for (const auto &idx: shape.mesh.indices) {
+                PhysVertex pv{
+                    idx.vertex_index,
+                    idx.normal_index,
+                    idx.texcoord_index
+                };
+
+                if (vertexMap.count(pv) == 0) {
+                    glm::vec3 pos(
+                        attrib.vertices[3 * idx.vertex_index + 0],
+                        attrib.vertices[3 * idx.vertex_index + 1],
+                        attrib.vertices[3 * idx.vertex_index + 2]
+                    );
+
+                    uint32_t newIndex = restPositions.size();
+                    restPositions.push_back(pos);
+                    vertexMap[pv] = newIndex;
+                }
+            }
+
             size_t index_offset = 0;
+
             for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); ++f) {
                 int fv = shape.mesh.num_face_vertices[f];
-                if (fv < 3) continue; // ignore degenerate faces
+                if (fv < 3) continue;
 
-                // Get face indices
-                std::vector<uint32_t> faceIndices;
+                std::vector<uint32_t> face;
+
                 for (int j = 0; j < fv; ++j) {
-                    int idx = shape.mesh.indices[index_offset + j].vertex_index;
-                    glm::vec3 pos(
-                        attrib.vertices[3 * idx + 0],
-                        attrib.vertices[3 * idx + 1],
-                        attrib.vertices[3 * idx + 2]);
-
-                    auto it = posMap.find(pos);
-                    if (it == posMap.end()) {
-                        uint32_t newIndex = restPositions.size();
-                        restPositions.push_back(pos);
-                        posMap[pos] = newIndex;
-                        faceIndices.push_back(newIndex);
-                    } else {
-                        faceIndices.push_back(it->second);
-                    }
+                    auto &idx = shape.mesh.indices[index_offset + j];
+                    PhysVertex pv{idx.vertex_index, idx.normal_index, idx.texcoord_index};
+                    face.push_back(vertexMap[pv]);
                 }
 
-                // Triangulate quad or polygon face
                 for (int t = 1; t < fv - 1; ++t) {
-                    indices.push_back(faceIndices[0]);
-                    indices.push_back(faceIndices[t]);
-                    indices.push_back(faceIndices[t + 1]);
+                    indices.push_back(face[0]);
+                    indices.push_back(face[t]);
+                    indices.push_back(face[t + 1]);
                 }
 
                 index_offset += fv;
             }
         }
+
+        /* -------------------------------------------------------------------------------------------- */
+
+        // TODO
+        // Need to make welds between duplicate vertexes
+
+        struct Vec3Grid {
+            int x, y, z;
+            bool operator==(const Vec3Grid &other) const { return x == other.x && y == other.y && z == other.z; }
+        };
+
+        struct Vec3GridHash {
+            size_t operator()(const Vec3Grid &g) const {
+                return std::hash<int>()(g.x) ^ (std::hash<int>()(g.y) << 1) ^ (std::hash<int>()(g.z) << 2);
+            }
+        };
+
+        constexpr float q = 1e-5f;
+
+        std::unordered_map<Vec3Grid, std::vector<uint32_t>, Vec3GridHash> buckets;
+        for (uint32_t i = 0; i < restPositions.size(); ++i) {
+            glm::vec3 &p = restPositions[i];
+            Vec3Grid key{
+                static_cast<int>(std::round(p.x / q)),
+                static_cast<int>(std::round(p.y / q)),
+                static_cast<int>(std::round(p.z / q))
+            };
+            buckets[key].push_back(i);
+        }
+
+        for (auto &[key, verts]: buckets) {
+            if (verts.size() < 2) continue;
+            for (size_t i = 0; i < verts.size(); ++i)
+                for (size_t j = i + 1; j < verts.size(); ++j)
+                    constraints.push_back({verts[i], verts[j], 0.0f, 1e-8f, 0.0f});
+        }
+
+        /* -------------------------------------------------------------------------------------------- */
 
         // Initialize positions
         positions = restPositions;
@@ -113,26 +160,72 @@ public:
 
         invMass.resize(positions.size(), 1.0f);
 
-        // Build unique edges from triangle indices
+        struct EdgeKey {
+            uint32_t a, b;
+
+            EdgeKey(uint32_t i, uint32_t j) {
+                a = std::min(i, j);
+                b = std::max(i, j);
+            }
+
+            bool operator==(const EdgeKey &other) const {
+                return a == other.a && b == other.b;
+            }
+        };
+
+        struct EdgeKeyHash {
+            size_t operator()(const EdgeKey &e) const {
+                return std::hash<uint32_t>()(e.a) ^ (std::hash<uint32_t>()(e.b) << 1);
+            }
+        };
+
+        std::unordered_map<EdgeKey, int, EdgeKeyHash> edgeCounts;
+
         for (size_t i = 0; i < indices.size(); i += 3) {
             uint32_t i0 = indices[i + 0];
             uint32_t i1 = indices[i + 1];
             uint32_t i2 = indices[i + 2];
 
-            edges.insert({i0, i1});
-            edges.insert({i1, i2});
-            edges.insert({i2, i0});
+            edgeCounts[EdgeKey(i0, i1)]++;
+            edgeCounts[EdgeKey(i1, i2)]++;
+            edgeCounts[EdgeKey(i2, i0)]++;
+        }
+
+        std::vector<Edge> structuralEdges;
+
+        float minEdgeLen = FLT_MAX;
+        for (auto &[e, _]: edgeCounts) {
+            float len = glm::length(restPositions[e.a] - restPositions[e.b]);
+            minEdgeLen = std::min(minEdgeLen, len);
+        }
+
+        for (auto &[e, count]: edgeCounts) {
+            float len = glm::length(restPositions[e.a] - restPositions[e.b]);
+
+            // Filter out diagonals (heuristic but robust)
+            if (len <= minEdgeLen * 1.05f) {
+                structuralEdges.push_back({e.a, e.b});
+            }
         }
 
         // Create distance constraints
-        for (const auto& e : edges) {
+        constraints.clear();
+
+        for (const auto &e: structuralEdges) {
             float restLen = glm::length(restPositions[e.a] - restPositions[e.b]);
-            constraints.push_back({e.a, e.b, restLen, 1e-6f, 0.0f});
+
+            constraints.push_back({
+                e.a,
+                e.b,
+                restLen,
+                1e-5f, // compliance
+                0.0f
+            });
         }
 
         std::cout << "Soft body initialized: "
                   << restPositions.size() << " vertices, "
-                  << edges.size() << " edges, "
+                  << structuralEdges.size() << " edges, "
                   << constraints.size() << " constraints.\n";
     }
 
@@ -150,7 +243,6 @@ public:
             prevPositions[i] = temp;
         }
     }
-
 
     void SolveDistanceConstraint(
     DistanceConstraint& c,
