@@ -40,9 +40,9 @@ void MainEngine::CharacterCallback(GLFWwindow* window, unsigned int key, int sca
     }
 }
 
-void MainEngine::MouseCallback(GLFWwindow* window, int button, int action, int mods) {
-    std::shared_ptr<Camera> camera = GetCurrScene()->GetCurrCamera();
-    if(GetCurrScene()->GetCameras().at(0) == camera) {
+void MainEngine::MouseCallback(GLFWwindow *window, const int button, const int action, int mods) {
+    if (std::shared_ptr<Camera> camera = GetCurrScene()->GetCurrCamera();
+        GetCurrScene()->GetCameras().at(0) == camera) {
         if(button == GLFW_MOUSE_BUTTON_RIGHT) {
             if(action == GLFW_PRESS) {
                 mouseDragging = true;
@@ -60,16 +60,15 @@ void MainEngine::MouseCallback(GLFWwindow* window, int button, int action, int m
     }
 }
 
-void MainEngine::runSimulation() {
+void MainEngine::runSimulation() const {
     const auto models = GetCurrScene()->GetModels();
     for (const auto &curr: models) {
-        SoftBody *body = dynamic_cast<SoftBody *>(curr->GetComponent(SOFTBODY));
-        if (body) {
-            float dt = timeDelta.count();
+        if (auto *body = dynamic_cast<SoftBody *>(curr->GetComponent(SOFTBODY))) {
+            const float dt = timeDelta.count();
             std::cout << "Running simulation loop: " << dt << "s " << std::endl;
             body->Integrate(dt, gravity);
-            body->SolveConstraints(dt);
-            body->SolveFloorCollision(-10.0f); // floor at y = 0
+            body->SolveConstraints(dt, 0.1f, 8);
+            body->SolveFloorCollision(-10.0f);
         }
     }
 }

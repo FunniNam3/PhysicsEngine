@@ -36,7 +36,7 @@ private:
         };
         for (int i = 0; i < n; i++)
         {
-            scene->AddModel("bunny.obj", "bunny");
+            scene->AddModel("sphere.obj", "sphere");
             const auto& obj = scene->GetModels().at(i);
 
             std::dynamic_pointer_cast<Transform>(obj->components[TRANSFORM])->position = pos[i];
@@ -113,5 +113,5 @@ public:
 
     void MouseCallback(GLFWwindow *window, int button, int action, int mods);
 
-    void runSimulation();
+    void runSimulation() const;
 };
