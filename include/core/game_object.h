@@ -92,20 +92,25 @@ public:
             case SOFTBODY:
                 if(!components[SOFTBODY]) {
                     auto modelPath = dynamic_cast<Model*>(components[MODEL].get())->modelPath;
-                    components[SOFTBODY] = std::make_shared<SoftBody>(modelPath);
+                    components[SOFTBODY] = std::make_shared<SoftBody>(modelPath, GetTransform()->GetModelMatrix(glm::vec3(0, 0, 0)));
                 }
             default: ;
         }
     }
 
+    void AddSoftBody(const float* vars) {
+        auto modelPath = dynamic_cast<Model*>(components[MODEL].get())->modelPath;
+        components[SOFTBODY] = std::make_shared<SoftBody>(modelPath, GetTransform()->GetModelMatrix(glm::vec3(0, 0, 0)), vars[0], vars[1], vars[2], vars[3]);
+    }
+
     // Don't call on transform
-    void RemoveComponent(COMPONENT_TYPE type) {
+    void RemoveComponent(const COMPONENT_TYPE type) {
         if(components[type] && type != TRANSFORM) {
             components[type] = nullptr;
         }
     }
 
-    void CopyComponent(const std::shared_ptr<Component> component) {
+    void CopyComponent(const std::shared_ptr<Component>& component) {
         if(component) {
             COMPONENT_TYPE type = component->type;
             components[type] = component->Clone();

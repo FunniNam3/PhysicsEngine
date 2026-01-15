@@ -62,13 +62,13 @@ void MainEngine::MouseCallback(GLFWwindow *window, const int button, const int a
 
 void MainEngine::runSimulation() const {
     const auto models = GetCurrScene()->GetModels();
+    const float dt = timeDelta.count();
+    std::cout << "Running simulation loop: " << dt << "s " << std::endl;
     for (const auto &curr: models) {
         if (auto *body = dynamic_cast<SoftBody *>(curr->GetComponent(SOFTBODY))) {
-            const float dt = timeDelta.count();
-            std::cout << "Running simulation loop: " << dt << "s " << std::endl;
             body->Integrate(dt, gravity);
-            body->SolveConstraints(dt, 0.1f, 8);
-            body->SolveFloorCollision(-10.0f);
+            body->SolveConstraints(dt, 0.02f, 10);
+            body->SolveFloorCollision(0.0f);
         }
     }
 }

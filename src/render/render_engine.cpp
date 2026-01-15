@@ -23,7 +23,7 @@ void LoadOBJ(
     std::vector<tinyobj::material_t> materials;
     std::string err;
 
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err,
+    bool ret = LoadObj(&attrib, &shapes, &materials, &err,
                                 filename.c_str());
 
     if (!err.empty())
@@ -55,13 +55,10 @@ void LoadOBJ(
 
     // Loop through all shapes
     for (const auto &shape: shapes) {
-        for (size_t f = 0; f < shape.mesh.indices.size(); ++f) {
-            tinyobj::index_t idx = shape.mesh.indices[f];
-
+        for (auto idx : shape.mesh.indices) {
             Vertex v{idx.vertex_index, idx.normal_index, idx.texcoord_index};
 
-            auto it = uniqueVertices.find(v);
-            if (it != uniqueVertices.end()) {
+            if (auto it = uniqueVertices.find(v); it != uniqueVertices.end()) {
                 outIndices.push_back(it->second);
             } else {
                 glm::vec3 pos(0.0f);
@@ -88,7 +85,7 @@ void LoadOBJ(
                     tex.y = attrib.texcoords[2 * v.texIdx + 1];
                 }
 
-                unsigned int newIndex = static_cast<unsigned int>(outPositions.size());
+                auto newIndex = static_cast<unsigned int>(outPositions.size());
                 outPositions.push_back(pos);
                 outNormals.push_back(norm);
                 outTexCoords.push_back(tex);
@@ -220,39 +217,46 @@ void RenderEngine::MapShadows(GLuint depthMapFBO, GLuint const shadowWidth,  GLu
 
     shadow.Bind();
 
-    const auto& scene = mainEngine->GetCurrScene();
+    const auto& scene = MainEngine::GetCurrScene();
 
     glm::mat4 lightSpaceMatrix = scene->getLightSpaceMatrix();
     shadow.SendUniformData(lightSpaceMatrix, "lightSpaceMatrix");
 
     for (const auto& model : scene->GetModels())
     {
-        const auto& objTransform = std::dynamic_pointer_cast<Transform>( model->components[TRANSFORM]);
-        const auto& objModel = std::dynamic_pointer_cast<Model>(model->components[MODEL]);
+        const auto transform = std::dynamic_pointer_cast<Transform>(model->components[TRANSFORM]);
+        const auto modelComp = std::dynamic_pointer_cast<Model>(model->components[MODEL]);
 
+        auto softBody = std::dynamic_pointer_cast<SoftBody>(model->components[SOFTBODY]);
 
-        if (!objTransform || !objModel) continue; // essential components must exist
+        if (!transform || !modelComp) continue;
 
-        std::string& modelPath = objModel->modelPath;
+        const std::string &path = modelComp->modelPath;
 
-        // Check if the position buffer is already loaded
-        if (posBuffMap.find(modelPath) == posBuffMap.end()) {
-            // Load model buffers if they are not already loaded
-            LoadModel(modelPath);
+        if (vaoMap.find(path) == vaoMap.end())
+            LoadModel(path);
+
+        const GLuint vao = vaoMap[path];
+        const GLuint posVBO = posBuffMap[path];
+        const size_t count = indexCountMap[path];
+
+        glBindVertexArray(vao);
+
+        glBindBuffer(GL_ARRAY_BUFFER, posVBO);
+
+        // Update soft-body positions
+        if (softBody) {
+            glBufferSubData(GL_ARRAY_BUFFER, 0,
+                            softBody->positions.size() * sizeof(glm::vec3),
+                            softBody->positions.data());
         }
 
-        glm::mat4 modelMatrix(1.0f);
-        modelMatrix = glm::translate(glm::mat4(1.0f), objTransform->position)
-            * glm::rotate(glm::mat4(1.0f), glm::radians(objTransform->rotation[0]), glm::vec3(1.0f, 0.0f, 0.0f))
-            * glm::rotate(glm::mat4(1.0f), glm::radians(objTransform->rotation[1]), glm::vec3(0.0f, 1.0f, 0.0f))
-            * glm::rotate(glm::mat4(1.0f), glm::radians(objTransform->rotation[2]), glm::vec3(0.0f, 0.0f, 1.0f))
-            * glm::scale(glm::mat4(1.0f), objTransform->scale);
-
-        shadow.SendAttributeData(posBuffMap[modelPath], "aPos", 3);
+        glm::mat4 modelMatrix = !softBody ? transform->GetModelMatrix(biasMap[path]) : glm::mat4(1.0f);
 
         shadow.SendUniformData(modelMatrix, "model");
 
-        glDrawArrays(GL_TRIANGLES, 0, posBuffMap[modelPath] / 3);
+        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(count), GL_UNSIGNED_INT, nullptr);
+        glBindVertexArray(0);
     }
 
     shadow.Unbind();
@@ -272,7 +276,7 @@ void RenderEngine::Display(glm::vec4 viewportInfo, GLuint depthMap)
 
     glEnable(GL_DEPTH_TEST);
 
-    const auto& scene = mainEngine->GetCurrScene();
+    const auto& scene = MainEngine::GetCurrScene();
     if (!scene) return;
 
     camera = scene->GetCurrCamera();
@@ -288,9 +292,9 @@ void RenderEngine::Display(glm::vec4 viewportInfo, GLuint depthMap)
 
     // Render each model
     for (const auto &model: scene->GetModels()) {
-        auto transform = std::dynamic_pointer_cast<Transform>(model->components[TRANSFORM]);
+        const auto transform = std::dynamic_pointer_cast<Transform>(model->components[TRANSFORM]);
+        const auto modelComp = std::dynamic_pointer_cast<Model>(model->components[MODEL]);
         auto material = std::dynamic_pointer_cast<Material>(model->components[MATERIAL]);
-        auto modelComp = std::dynamic_pointer_cast<Model>(model->components[MODEL]);
         auto softBody = std::dynamic_pointer_cast<SoftBody>(model->components[SOFTBODY]);
 
         if (!transform || !modelComp) continue;
@@ -300,12 +304,13 @@ void RenderEngine::Display(glm::vec4 viewportInfo, GLuint depthMap)
         if (vaoMap.find(path) == vaoMap.end())
             LoadModel(path);
 
-        GLuint vao = vaoMap[path];
-        GLuint posVBO = posBuffMap[path];
-        size_t count = indexCountMap[path];
+        const GLuint vao = vaoMap[path];
+        const GLuint posVBO = posBuffMap[path];
+        const size_t count = indexCountMap[path];
 
 
         glBindVertexArray(vao);
+
         glBindBuffer(GL_ARRAY_BUFFER, posVBO);
 
         // Update soft-body positions
@@ -315,8 +320,8 @@ void RenderEngine::Display(glm::vec4 viewportInfo, GLuint depthMap)
                             softBody->positions.data());
         }
 
-        glm::mat4 modelMatrix = transform->GetModelMatrix(biasMap[path]);
-        glm::mat4 normalMatrix = glm::transpose(glm::inverse(modelMatrix));
+        glm::mat4 modelMatrix = !softBody ? transform->GetModelMatrix(biasMap[path]) : glm::mat4(1.0f);
+        glm::mat4 normalMatrix = !softBody ? transpose(inverse(modelMatrix)) : glm::mat4(1.0f);
 
         program.Bind();
 
@@ -354,7 +359,7 @@ void RenderEngine::Display(glm::vec4 viewportInfo, GLuint depthMap)
         }
 
         // Draw
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(count), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(count), GL_UNSIGNED_INT, nullptr);
         glBindVertexArray(0);
 
         program.Unbind();
@@ -365,7 +370,7 @@ void RenderEngine::CharacterCallback(GLFWwindow *window, unsigned int key) {
 }
 
 
-void RenderEngine::FrameBufferSizeCallback(GLFWwindow* lWindow, int width, int height)
+void RenderEngine::FrameBufferSizeCallback(GLFWwindow* lWindow, const int& width, const int& height)
 {
 	glViewport(0, 0, width, height);
 }

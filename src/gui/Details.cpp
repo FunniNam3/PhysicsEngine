@@ -7,7 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-void ShowTransform(std::shared_ptr<Transform> &object_transform){
+void ShowTransform(const std::shared_ptr<Transform> &object_transform) {
     if (ImGui::TreeNode("Transform")){
         ImGui::Text("Position");
         ImGui::SameLine();
@@ -25,7 +25,7 @@ void ShowTransform(std::shared_ptr<Transform> &object_transform){
     }
 }
 
-void ShowMaterial(std::shared_ptr<Material> &object_material) {
+void ShowMaterial(const std::shared_ptr<Material> &object_material) {
     if (ImGui::TreeNode("Material")){
         ImGui::Text("Ambient");
         ImGui::SameLine();
@@ -48,11 +48,39 @@ void ShowMaterial(std::shared_ptr<Material> &object_material) {
     }
 }
 
-void ShowLight(std::shared_ptr<PointLight> &object_light) {
+void ShowLight(const std::shared_ptr<PointLight> &object_light) {
     if (ImGui::TreeNode("Light")) {
         ImGui::Text("Color");
         ImGui::SameLine();
         ImGui::ColorPicker3("##Color", &object_light->color[0]);
+        ImGui::TreePop();
+    }
+}
+
+void resetSoftBody(const std::shared_ptr<SoftBody> &object_softBody, const std::shared_ptr<GameObject> &object) {
+    std::cout << "body reset" << std::endl;
+    const float *vars = object_softBody->getVars();
+    object->RemoveComponent(SOFTBODY);
+    object->AddSoftBody(vars);
+}
+
+void ShowSoftBody(const std::shared_ptr<SoftBody> &object_softBody, const std::shared_ptr<GameObject> &object) {
+    if (ImGui::TreeNode("SoftBody")) {
+        ImGui::Text("Edge Compliance");
+        ImGui::SameLine();
+        ImGui::DragFloat("##Edge", &object_softBody->edgeCompliance);
+        ImGui::Text("Bending Compliance");
+        ImGui::SameLine();
+        ImGui::DragFloat("##Bend", &object_softBody->bendingCompliance);
+        ImGui::Text("Volume Compliance");
+        ImGui::SameLine();
+        ImGui::DragFloat("##Volume", &object_softBody->volumeCompliance);
+        ImGui::Text("Pressure Strength");
+        ImGui::SameLine();
+        ImGui::DragFloat("##Pressure", &object_softBody->pressureStrength);
+        if (ImGui::Button("Reset Model")) {
+            resetSoftBody(object_softBody, object);
+        }
         ImGui::TreePop();
     }
 }
@@ -133,7 +161,7 @@ void ShowComponentControl(const std::shared_ptr<Scene> &scene) {
     if(ImGui::Combo("##Component", &currentComponent, items, IM_ARRAYSIZE(items))) {
         // reset things when dropdown changes
         gameObjectNames.clear();
-        gameObjectNames.push_back("Select Object");
+        gameObjectNames.emplace_back("Select Object");
         currentObject = 0; 
         copyObject = nullptr;
 
@@ -143,6 +171,7 @@ void ShowComponentControl(const std::shared_ptr<Scene> &scene) {
             case 2: type = MATERIAL; break;
             case 3: type = LIGHT; break;
             case 4: type = SOFTBODY; break;
+            default: throw std::runtime_error("No Component Type Selected");
         }
         if(type != NUM_ENUM) {
             for(const auto& model : scene->GetModels()) {
@@ -252,10 +281,7 @@ void Details::ShowDetails(const std::shared_ptr<Scene>& scene)
             if(ImGui::Button("Delete")) {
                 DeleteObject(scene);
             }
-        }
-        else if(scene->selectedGameObj)
-        {
-            std::shared_ptr<GameObject> object = scene->selectedGameObj;
+        } else if (std::shared_ptr<GameObject> object = scene->selectedGameObj) {
             if(auto objectName = &object->name)
             {
                 char nameBuffer[128];
@@ -282,6 +308,9 @@ void Details::ShowDetails(const std::shared_ptr<Scene>& scene)
                 }
                 if(auto objLight = std::dynamic_pointer_cast<PointLight>( objComponent )) {
                     ShowLight(objLight);
+                }
+                if (auto objSoftBody = std::dynamic_pointer_cast<SoftBody>(objComponent)) {
+                    ShowSoftBody(objSoftBody, object);
                 }
             }
             if(ImGui::TreeNode("Component Control")) {

@@ -8,7 +8,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <iostream>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -42,7 +41,7 @@ class RenderEngine
 	std::unordered_map<std::string, size_t> indexCountMap;
 	std::unordered_map<std::string, GLuint> vaoMap;
 
-    std::unordered_map<std::string, glm::vec3>          biasMap;
+	std::unordered_map<std::string, glm::vec3> biasMap;
 
 	std::vector<float> posBuff;
 	std::vector<float> norBuff;
@@ -51,13 +50,13 @@ class RenderEngine
 	struct lightStruct {
 		glm::vec3 position;
 		glm::vec3 color;
-	} lights[NUM_LIGHTS];
+	} lights[NUM_LIGHTS]{};
 
 	int mat_idx = 0;
 	int shader_idx = 0;
 
-	GLuint shaderProgram;
-	GLuint shadowProgram;
+	GLuint shaderProgram{};
+	GLuint shadowProgram{};
 
 	std::shared_ptr<Camera> camera;
 	MainEngine* mainEngine;
@@ -76,7 +75,7 @@ public:
 		Init();
 	}
 
-	void SetProgram(GLuint _shaderProgram, GLuint _shadowProgram) {
+	void SetProgram(const GLuint _shaderProgram, const GLuint _shadowProgram) {
 		shaderProgram = _shaderProgram;
 		shadowProgram = _shadowProgram;
 	};
@@ -88,8 +87,10 @@ public:
 	void MapShadows(GLuint depthMapFBO, GLuint shadowWidth = 1024,  GLuint shadowHeight = 1024);
 
 	void Display(glm::vec4 viewportInfo, GLuint depthMap);
-	void CharacterCallback(GLFWwindow* window, unsigned int key);
-	void FrameBufferSizeCallback(GLFWwindow* lWindow, int width, int height);
+
+	static void CharacterCallback(GLFWwindow *window, unsigned int key);
+
+	static void FrameBufferSizeCallback(GLFWwindow *lWindow, const int &width, const int &height);
 
 	void LoadModel(const std::string &name);
 

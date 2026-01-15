@@ -36,14 +36,13 @@ private:
         };
         for (int i = 0; i < n; i++)
         {
-            scene->AddModel("sphere.obj", "sphere");
+            scene->AddModel("bunny.obj", "bunny");
             const auto& obj = scene->GetModels().at(i);
 
             std::dynamic_pointer_cast<Transform>(obj->components[TRANSFORM])->position = pos[i];
         }
 
         // Make floor
-
         scene->AddModel("square.obj", "floor");
         const auto &obj = scene->GetModels().at(1);
 
@@ -54,7 +53,7 @@ private:
         // Make Light
         const auto light1 = std::make_shared<GameObject>();
         const auto lightTransform1 = std::make_shared<Transform>(
-            glm::vec3(0.0f, 20.0f, -30.0f),
+            glm::vec3(30.0f, 30.0f, -30.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(0.0f, 0.0f, 0.0f));
 
@@ -79,7 +78,7 @@ public:
 
     float cameraSense = 0.1f;
     float movementSense = 1.f;
-    glm::vec3 gravity = {0, -9.81f, 0};
+    glm::vec3 gravity = {0, -9.8f, 0};
 
     bool mouseDragging = false;
     glm::vec2 lastMousePos = glm::vec2(0.0f);

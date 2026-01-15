@@ -6,8 +6,14 @@
 #include "render/tiny_obj_loader.h"
 #include <unordered_map>
 
+// TODO I DONT KNOW WHY THE MODEL IS SO JITTERY AND DOES NOT FOLLOW BENDING AND DISTANCE CONSTRAINTS ANYMORE
+
 class SoftBody final : public Component
 {
+    struct Triangle {
+        uint32_t v[3];
+    };
+
     struct Constraint {
         virtual ~Constraint() = default;
 
@@ -17,9 +23,7 @@ class SoftBody final : public Component
             float dt,
             std::vector<glm::vec3> &positions,
             std::vector<float> &invMass,
-            float maxCorrection,
-            std::vector<glm::vec3> &centroids,
-            std::vector<float> &invCentroidMass
+            float maxCorrection
         ) = 0;
 
         virtual std::string type() { return "Constraint"; }
@@ -30,11 +34,14 @@ class SoftBody final : public Component
     struct DistanceConstraint final : Constraint {
         uint32_t a, b;
         float restDistance;
-        float compliance; // 0 = rigid, >0 = soft
+        float *compliance; // 0 = rigid, >0 = soft
 
         void solve(
-            const float dt, std::vector<glm::vec3> &positions, std::vector<float> &invMass, float maxCorrection,
-            std::vector<glm::vec3> &centroids, std::vector<float> &invCentroidMass) override {
+            const float dt,
+            std::vector<glm::vec3> &positions,
+            std::vector<float> &invMass,
+            const float maxCorrection
+        ) override {
             glm::vec3 &p0 = positions[a];
             glm::vec3 &p1 = positions[b];
 
@@ -52,11 +59,9 @@ class SoftBody final : public Component
             const float wSum = w0 + w1;
             if (wSum < 1e-8f) return; // Prevent division by 0
 
-            const float alpha = compliance / (dt * dt);
+            const float alpha = (*compliance) / (dt * dt);
             float dLambda = (-C - alpha * lambda) / (wSum + alpha);
-
             dLambda = glm::clamp(dLambda, -maxCorrection, maxCorrection);
-
             lambda += dLambda;
 
             p0 -= w0 * dLambda * grad;
@@ -64,8 +69,8 @@ class SoftBody final : public Component
         }
 
         DistanceConstraint(const uint32_t _a, const uint32_t _b, const float _restingValue,
-                           const float _compliance): a(_a), b(_b),
-                                                     restDistance(_restingValue), compliance(_compliance) {
+                           float *_compliance): a(_a), b(_b),
+                                                restDistance(_restingValue), compliance(_compliance) {
         }
 
         std::string type() override { return "Distance Constraint"; }
@@ -75,66 +80,88 @@ class SoftBody final : public Component
         }
     };
 
-    struct VolumeConstraint final : Constraint {
-        uint32_t a, b, c, d;
+    struct GlobalVolumeConstraint final : Constraint {
+        std::vector<uint32_t> vertices;
+        std::vector<Triangle> triangles;
+        std::vector<glm::vec3> grad;
         float restVolume;
-        float compliance; // 0 = rigid, >0 = soft
+        float *compliance;
+        float *pressureStrength;
 
-        void solve(const float dt, std::vector<glm::vec3> &positions, std::vector<float> &invMass, float maxCorrection,
-                   std::vector<glm::vec3> &centroids, std::vector<float> &invCentroidMass) override {
-            glm::vec3 aV = positions[a], bV = positions[b], cV = positions[c], dV = centroids[d];
+        void solve(
+            const float dt,
+            std::vector<glm::vec3> &positions,
+            std::vector<float> &invMass,
+            const float maxCorrection
+        ) override {
+            const float V = computeVolume(positions, triangles);
+            const float C = V - restVolume;
 
-            // current volume
-            float V = dot(cross(bV - aV, cV - aV), dV - aV) / 6.0f;
+            std::fill(grad.begin(), grad.end(), glm::vec3(0));
 
-            float cVol = V - std::abs(restVolume);
+            for (const auto &[v]: triangles) {
+                grad[v[0]] += cross(positions[v[1]] - positions[v[0]], positions[v[2]] - positions[v[0]]) / 6.0f;
+                grad[v[1]] += cross(positions[v[2]] - positions[v[1]], positions[v[0]] - positions[v[1]]) / 6.0f;
+                grad[v[2]] += cross(positions[v[0]] - positions[v[2]], positions[v[1]] - positions[v[2]]) / 6.0f;
+            }
 
-            // gradients
-            glm::vec3 gradA = cross(bV - cV, dV - cV) / 6.0f;
-            glm::vec3 gradB = cross(cV - aV, dV - aV) / 6.0f;
-            glm::vec3 gradC = cross(aV - bV, dV - bV) / 6.0f;
-            glm::vec3 gradD = cross(bV - aV, cV - aV) / 6.0f;
-
-            float wSum = invMass[a] * dot(gradA, gradA)
-                         + invMass[b] * dot(gradB, gradB)
-                         + invMass[c] * dot(gradC, gradC)
-                         + invCentroidMass[d] * dot(gradD, gradD);
+            float wSum = 0.0f;
+            for (const auto i: vertices)
+                wSum += invMass[i] * dot(grad[i], grad[i]);
 
             if (wSum < 1e-8f) return;
 
-            float alpha = compliance / (dt * dt);
-            float dLambda = (-cVol - alpha * lambda) / (wSum + alpha);
+            const float alpha = (*compliance) / (dt * dt);
+            const float pressureTerm = (*pressureStrength) * restVolume;
+            float dLambda = (-C + pressureTerm - alpha * lambda) / (wSum + alpha);
 
-            float maxMove = 0.0f;
-            maxMove = std::max(maxMove, glm::length(invMass[a] * dLambda * gradA));
-            maxMove = std::max(maxMove, glm::length(invMass[b] * dLambda * gradB));
-            maxMove = std::max(maxMove, glm::length(invMass[c] * dLambda * gradC));
-            maxMove = std::max(maxMove, glm::length(invCentroidMass[d] * dLambda * gradD));
-
-            if (maxMove > maxCorrection && maxMove > 0.0f) {
-                dLambda *= maxCorrection / maxMove;
-            }
-
+            dLambda = glm::clamp(dLambda, -maxCorrection, maxCorrection);
             lambda += dLambda;
 
-            positions[a] += invMass[a] * dLambda * gradA;
-            positions[b] += invMass[b] * dLambda * gradB;
-            positions[c] += invMass[c] * dLambda * gradC;
-            centroids[d] += invCentroidMass[d] * dLambda * gradD;
+            for (const auto i: vertices)
+                positions[i] += invMass[i] * dLambda * grad[i];
         }
 
-        VolumeConstraint(const uint32_t _a, const uint32_t _b, const uint32_t _c, const uint32_t _d,
-                         const float _restVolume,
-                         const float _compliance): a(_a), b(_b), c(_c), d(_d), restVolume(_restVolume),
-                                                   compliance(_compliance) {
+        GlobalVolumeConstraint(
+            const std::vector<uint32_t> &_vertices,
+            const std::vector<Triangle> &_triangles,
+            const std::vector<glm::vec3> &restPositions,
+            float *_compliance,
+            float *_pressureStrength
+        )
+            : vertices(_vertices),
+              triangles(_triangles),
+              compliance(_compliance),
+              pressureStrength(_pressureStrength) {
+            // Compute rest volume from initial configuration
+            restVolume = computeVolume(restPositions, triangles);
+            grad.resize(vertices.size(), glm::vec3(0));
+
+            // Ensure positive orientation
+            if (restVolume < 0.0f)
+                restVolume = -restVolume;
         }
 
-        std::string type() override { return "Volume Constraint"; }
+        std::string type() override { return "Global Volume Constraint"; }
 
         [[nodiscard]] std::unique_ptr<Constraint> clone() const override {
-            return std::make_unique<VolumeConstraint>(*this);
+            return std::make_unique<GlobalVolumeConstraint>(*this);
         }
     };
+
+    static float computeVolume(
+        const std::vector<glm::vec3> &positions,
+        const std::vector<Triangle> &tris
+    ) {
+        float V = 0.0f;
+        for (const auto &[v]: tris) {
+            const glm::vec3 &a = positions[v[0]];
+            const glm::vec3 &b = positions[v[1]];
+            const glm::vec3 &c = positions[v[2]];
+            V += dot(a, cross(b, c));
+        }
+        return V / 6.0f;
+    }
 
 public:
     std::vector<glm::vec3> restPositions;
@@ -143,9 +170,20 @@ public:
     std::vector<float> invMass;
 
     std::vector<glm::vec3> restCentroids;
-    std::vector<glm::vec3> centroids;
-    std::vector<glm::vec3> prevCentroids;
-    std::vector<float> invCentroidMass;
+
+    float edgeCompliance;
+    float bendingCompliance;
+    float volumeCompliance;
+    float pressureStrength;
+
+    [[nodiscard]] float *getVars() const {
+        return new float[]{
+            edgeCompliance,
+            bendingCompliance,
+            volumeCompliance,
+            pressureStrength
+        };
+    }
 
     std::vector<std::unique_ptr<Constraint> > constraints;
 
@@ -155,15 +193,27 @@ public:
                                       prevPositions(other.prevPositions),
                                       invMass(other.invMass),
                                       restCentroids(other.restCentroids),
-                                      centroids(other.centroids),
-                                      prevCentroids(other.prevCentroids),
-                                      invCentroidMass(other.invCentroidMass) {
+                                      edgeCompliance(other.edgeCompliance),
+                                      bendingCompliance(other.bendingCompliance),
+                                      volumeCompliance(other.volumeCompliance),
+                                      pressureStrength(other.pressureStrength) {
         constraints.reserve(other.constraints.size());
         for (auto &c: other.constraints)
             constraints.push_back(c->clone());
     }
 
-    explicit SoftBody(const std::string& modelPath) {
+    explicit SoftBody(
+        const std::string &modelPath,
+        const glm::mat4 &modelMatrix,
+        const float _edgeCompliance = 5e-4f,
+        const float _bendingCompliance = 5e-5f,
+        const float _volumeCompliance = 1e-5f,
+        const float _pressureStrength = 0.3f
+    )
+        : edgeCompliance(_edgeCompliance),
+          bendingCompliance(_bendingCompliance),
+          volumeCompliance(_volumeCompliance),
+          pressureStrength(_pressureStrength) {
         type = SOFTBODY;
 
         tinyobj::attrib_t attrib;
@@ -279,10 +329,15 @@ public:
                         verts[i],
                         verts[j],
                         0.0f,
-                        1e-6f // compliance
+                        &edgeCompliance
                     ));
                 }
             }
+        }
+
+        for (auto &pos: restPositions) {
+            auto temp = glm::vec4(pos.x, pos.y, pos.z, 1.0f);
+            pos = glm::vec3(modelMatrix * temp);
         }
 
         // Initialize positions
@@ -360,13 +415,9 @@ public:
                 e.a,
                 e.b,
                 restLen,
-                1e-6f // compliance
+                &edgeCompliance
             ));
         }
-
-        struct Triangle {
-            uint32_t v[3];
-        };
 
         std::vector<Triangle> triangles;
         triangles.reserve(indices.size() / 3);
@@ -407,8 +458,6 @@ public:
             return UINT32_MAX; // should never happen
         };
 
-        float bendingCompliance = 5e-4f;
-
         for (auto &[edge, adj]: edgeAdj) {
             // Only internal edges
             if (adj.triA == UINT32_MAX || adj.triB == UINT32_MAX)
@@ -431,49 +480,24 @@ public:
                 v2,
                 v3,
                 restLen,
-                bendingCompliance // compliance
+                &bendingCompliance // compliance
             ));
         }
 
-        // TODO Add a centroid link to triangle centers and pressure
-        for (auto &tri: triangles) {
-            uint32_t centroidIndex = restCentroids.size();
-
-            uint32_t a = tri.v[0], b = tri.v[1], c = tri.v[2], d = centroidIndex;
-
-            glm::vec3 centroidPos = (restPositions[tri.v[0]] + restPositions[tri.v[1]] + restPositions[tri.v[2]]) /
-                                    3.0f;
-
-            restCentroids.push_back(centroidPos);
-            invCentroidMass.push_back(invMass[a] + invMass[b] + invMass[c]);
-
-            float volumeConstraint = 1e-4f;
-
-            glm::vec3 p0 = restPositions[a];
-            glm::vec3 p1 = restPositions[b];
-            glm::vec3 p2 = restPositions[c];
-            glm::vec3 p3 = restCentroids[d];
-
-            float restVol = std::abs(dot(cross(p1 - p0, p2 - p0), p3 - p0) / 6.0f);
-
-            constraints.push_back(std::make_unique<VolumeConstraint>(
-                a, b, c, d, restVol, volumeConstraint
-            ));
-        }
-
-        centroids = restCentroids;
-
-        // Tiny offset for first frame to ensure cube falls
-        prevCentroids = centroids;
-        for (auto &c: prevCentroids) c.y -= 0.001f;
-
-        invCentroidMass.resize(centroids.size(), 1.0f);
+        constraints.push_back(
+            std::make_unique<GlobalVolumeConstraint>(
+                indices,
+                triangles,
+                restPositions, // rest pose
+                &volumeCompliance,
+                &pressureStrength
+            )
+        );
 
         std::cout << "Soft body initialized: "
                 << restPositions.size() << " vertices, "
                 << structuralEdges.size() << " edges, "
-                << constraints.size() << " constraints,"
-                << centroids.size() << " centroids\n";
+                << constraints.size() << " constraints";
     }
 
     void Integrate(const float dt, const glm::vec3 gravity) {
@@ -488,30 +512,17 @@ public:
             positions[i] += velocity + gravity * dt * dt;
             prevPositions[i] = temp;
         }
-
-        // centroids
-        for (size_t i = 0; i < centroids.size(); ++i) {
-            if (invCentroidMass[i] == 0.0f) continue;
-
-            const glm::vec3 temp = centroids[i];
-            glm::vec3 velocity = centroids[i] - prevCentroids[i];
-            centroids[i] += velocity + gravity * dt * dt;
-            prevCentroids[i] = temp;
-        }
     }
 
     void SolveConstraints(
         const float dt,
         const float maxCorrection,
         const int iterations = 8) {
-        for (const auto &c: constraints) {
-            c->lambda = 0.0f;
-        }
 
         for (int it = 0; it < iterations; ++it) {
             for (const auto &constraint: constraints) {
                 if (constraint) {
-                    constraint->solve(dt, positions, invMass, maxCorrection, centroids, invCentroidMass);
+                    constraint->solve(dt, positions, invMass, maxCorrection);
                 }
             }
         }
