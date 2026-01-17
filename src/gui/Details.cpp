@@ -68,13 +68,13 @@ void ShowSoftBody(const std::shared_ptr<SoftBody> &object_softBody, const std::s
     if (ImGui::TreeNode("SoftBody")) {
         ImGui::Text("Edge Compliance");
         ImGui::SameLine();
-        ImGui::DragFloat("##Edge", &object_softBody->edgeCompliance);
+        ImGui::DragFloat("##Edge", &object_softBody->edgeCompliance, 1e-8f, 0.f, 1.f, "%.4g", ImGuiSliderFlags_AlwaysClamp);
         ImGui::Text("Bending Compliance");
         ImGui::SameLine();
-        ImGui::DragFloat("##Bend", &object_softBody->bendingCompliance);
+        ImGui::DragFloat("##Bend", &object_softBody->bendingCompliance, 1e-8f, 0.f, 1.f, "%.4g", ImGuiSliderFlags_AlwaysClamp);
         ImGui::Text("Volume Compliance");
         ImGui::SameLine();
-        ImGui::DragFloat("##Volume", &object_softBody->volumeCompliance);
+        ImGui::DragFloat("##Volume", &object_softBody->volumeCompliance, 1e-8f, 0.f, 1.f, "%.4g", ImGuiSliderFlags_AlwaysClamp);
         ImGui::Text("Pressure Strength");
         ImGui::SameLine();
         ImGui::DragFloat("##Pressure", &object_softBody->pressureStrength);
