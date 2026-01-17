@@ -36,7 +36,7 @@ private:
         };
         for (int i = 0; i < n; i++)
         {
-            scene->AddModel("cube.obj", "cube");
+            scene->AddModel("bunny.obj", "bunny");
             const auto& obj = scene->GetModels().at(i);
 
             std::dynamic_pointer_cast<Transform>(obj->components[TRANSFORM])->position = pos[i];

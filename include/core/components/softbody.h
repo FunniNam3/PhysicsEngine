@@ -27,6 +27,9 @@ class SoftBody final : public Component
         virtual std::string type() { return "Constraint"; }
     };
 
+    // TODO debug constraints to make sure they work properly
+    // TODO Remove Constraint struct since it is not needed anymore
+
     struct DistanceConstraint final : Constraint {
         uint32_t a, b;
         float restDistance;
@@ -57,7 +60,7 @@ class SoftBody final : public Component
 
             const float alpha = (*compliance) / (dt * dt);
             float dLambda = (-C - alpha * lambda) / (wSum + alpha);
-            // dLambda = glm::clamp(dLambda, -maxCorrection, maxCorrection);
+            dLambda = glm::clamp(dLambda, -maxCorrection, maxCorrection);
             lambda += dLambda;
 
             p0 -= w0 * dLambda * grad;
@@ -93,7 +96,7 @@ class SoftBody final : public Component
             const float V = computeVolume(positions, triangles);
             const float C = V - restVolume;
 
-            if(abs(C) < 1e-8f) {
+            if (abs(C) < 1e-8f) {
                 return;
             }
 
@@ -113,15 +116,14 @@ class SoftBody final : public Component
 
             if (abs(denominator) > 1e-8f) {
                 // const float pressureTerm = (*pressureStrength) * restVolume;
-                // float dLambda = (-C - pressureTerm - alpha * lambda) / denominator;
+                // float dLambda = (-C + pressureTerm - alpha * lambda) / denominator;
                 float dLambda = (-C - alpha * lambda) / denominator;
-                // dLambda = glm::clamp(dLambda, -maxCorrection, maxCorrection);
+                dLambda = glm::clamp(dLambda, -maxCorrection, maxCorrection);
 
                 for (const auto i: vertices)
                     positions[i] += invMass[i] * dLambda * grad[i];
 
                 lambda += dLambda;
-
             };
         }
 
@@ -166,6 +168,22 @@ class SoftBody final : public Component
         return V / 6.0f;
     }
 
+    // struct BendingConstraint final : Constraint {
+    //     uint32_t a, b, c, d;
+    //     float restingAngle;
+    //     float *compliance; // 0 = rigid, >0 = soft
+    //     void solve(const float dt,
+    //         std::vector<glm::vec3> &positions,
+    //         std::vector<float> &invMass,
+    //         const float maxCorrection) override {
+    //
+    //     }
+    //     std::string type() override { return "Bending Constraint"; }
+    //     [[nodiscard]] std::unique_ptr<BendingConstraint> clone() const {
+    //         return std::make_unique<BendingConstraint>(*this);
+    //     }
+    // };
+
 public:
     std::vector<glm::vec3> restPositions;
     std::vector<glm::vec3> positions;
@@ -191,19 +209,17 @@ public:
         };
     }
 
-    SoftBody(const SoftBody &other) :
-        Component(other),
-        restPositions(other.restPositions),
-        positions(other.positions),
-        prevPositions(other.prevPositions),
-        invMass(other.invMass),
-        restCentroids(other.restCentroids),
-        edgeCompliance(other.edgeCompliance),
-        bendingCompliance(other.bendingCompliance),
-        volumeCompliance(other.volumeCompliance),
-        pressureStrength(other.pressureStrength),
-        globalVolumeConstraint(other.globalVolumeConstraint->clone())
-    {
+    SoftBody(const SoftBody &other) : Component(other),
+                                      restPositions(other.restPositions),
+                                      positions(other.positions),
+                                      prevPositions(other.prevPositions),
+                                      invMass(other.invMass),
+                                      restCentroids(other.restCentroids),
+                                      edgeCompliance(other.edgeCompliance),
+                                      bendingCompliance(other.bendingCompliance),
+                                      volumeCompliance(other.volumeCompliance),
+                                      pressureStrength(other.pressureStrength),
+                                      globalVolumeConstraint(other.globalVolumeConstraint->clone()) {
         distanceConstraints.reserve(other.distanceConstraints.size());
         for (const std::unique_ptr<DistanceConstraint> &c: other.distanceConstraints)
             distanceConstraints.push_back(c->clone());
@@ -457,7 +473,7 @@ public:
         //             adj.triB = t;
         //     }
         // }
-
+        //
         // auto oppositeVertex = [](const Triangle &t, uint32_t a, uint32_t b) {
         //     for (uint32_t v: t.v)
         //         if (v != a && v != b)
@@ -522,15 +538,14 @@ public:
         const float dt,
         const float maxCorrection,
         const int iterations = 8) {
-
         // Set Lambdas to 0
-        for(const auto &distanceConstraint: distanceConstraints) {
+        for (const auto &distanceConstraint: distanceConstraints) {
             if (distanceConstraint) {
                 distanceConstraint->lambda = 0.f;
             }
         }
 
-        if(globalVolumeConstraint) {
+        if (globalVolumeConstraint) {
             globalVolumeConstraint->lambda = 0.f;
         }
 
